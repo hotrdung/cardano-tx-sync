@@ -1,7 +1,7 @@
 // internal/storage/storage.go
 package storage
 
-import "cardano-ogmios-kafka-bridge/internal/model"
+import "cardano-tx-sync/internal/model"
 
 // Storage defines the interface for database operations.
 type Storage interface {

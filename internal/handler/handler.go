@@ -2,9 +2,9 @@
 package handler
 
 import (
-	"cardano-ogmios-kafka-bridge/internal/kafka"
-	"cardano-ogmios-kafka-bridge/internal/model"
-	"cardano-ogmios-kafka-bridge/internal/storage"
+	"cardano-tx-sync/internal/kafka"
+	"cardano-tx-sync/internal/model"
+	"cardano-tx-sync/internal/storage"
 	"encoding/json"
 	"sync"
 

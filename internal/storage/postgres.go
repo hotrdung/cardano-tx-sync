@@ -2,8 +2,8 @@
 package storage
 
 import (
-	"cardano-ogmios-kafka-bridge/config"
-	"cardano-ogmios-kafka-bridge/internal/model"
+	"cardano-tx-sync/config"
+	"cardano-tx-sync/internal/model"
 	"database/sql"
 	"fmt"
 	"time"

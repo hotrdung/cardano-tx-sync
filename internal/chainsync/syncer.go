@@ -2,10 +2,10 @@ package chainsync
 
 import (
 	"bytes"
-	"cardano-ogmios-kafka-bridge/config"
-	"cardano-ogmios-kafka-bridge/internal/handler"
-	"cardano-ogmios-kafka-bridge/internal/model"
-	"cardano-ogmios-kafka-bridge/internal/storage"
+	"cardano-tx-sync/config"
+	"cardano-tx-sync/internal/handler"
+	"cardano-tx-sync/internal/model"
+	"cardano-tx-sync/internal/storage"
 	"context"
 	"encoding/json"
 	"fmt"

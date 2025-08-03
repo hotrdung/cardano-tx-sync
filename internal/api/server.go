@@ -1,9 +1,9 @@
 package api
 
 import (
-	"cardano-ogmios-kafka-bridge/internal/chainsync"
-	"cardano-ogmios-kafka-bridge/internal/model"
-	"cardano-ogmios-kafka-bridge/internal/storage"
+	"cardano-tx-sync/internal/chainsync"
+	"cardano-tx-sync/internal/model"
+	"cardano-tx-sync/internal/storage"
 	"net/http"
 	"strconv"
 

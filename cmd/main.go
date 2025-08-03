@@ -2,12 +2,12 @@
 package main
 
 import (
-	"cardano-ogmios-kafka-bridge/config"
-	"cardano-ogmios-kafka-bridge/internal/api"
-	"cardano-ogmios-kafka-bridge/internal/chainsync"
-	"cardano-ogmios-kafka-bridge/internal/handler"
-	"cardano-ogmios-kafka-bridge/internal/kafka"
-	"cardano-ogmios-kafka-bridge/internal/storage"
+	"cardano-tx-sync/config"
+	"cardano-tx-sync/internal/api"
+	"cardano-tx-sync/internal/chainsync"
+	"cardano-tx-sync/internal/handler"
+	"cardano-tx-sync/internal/kafka"
+	"cardano-tx-sync/internal/storage"
 	"context"
 	"os"
 	"os/signal"

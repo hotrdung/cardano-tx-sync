@@ -1,4 +1,4 @@
-module cardano-ogmios-kafka-bridge
+module cardano-tx-sync
 
 go 1.23.0
 
