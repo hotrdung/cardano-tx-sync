@@ -1,0 +1,56 @@
+
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go toolchain
+*.out
+
+# Dependency directories (with Go 1.11 modules)
+/vendor
+
+# Go workspace file
+go.work
+
+# IDE-specific files
+.idea/
+*.iml
+.vscode/
+
+# Editor-specific files
+*~
+*.bak
+*.swp
+*.swo
+
+# Log files
+*.log
+
+# Environment variables
+.env
+.env.*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Kafka related files
+kafka-logs/
+
+# Configuration files that might contain sensitive information
+config.yml
+config.yaml
+
+# Build outputs
+/build/
+/dist/
+
+# Other
+.DS_Store
+Thumbs.db
