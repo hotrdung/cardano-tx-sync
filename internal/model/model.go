@@ -1,4 +1,3 @@
-// internal/model/model.go
 package model
 
 import "github.com/SundaeSwap-finance/ogmigo/ouroboros/chainsync"
@@ -11,13 +10,11 @@ const (
 	MappingTypeAddress MappingType = "address"
 	// MappingTypePolicyID maps a specific policy ID.
 	MappingTypePolicyID MappingType = "policy_id"
-	// MappingTypeAnyCert maps transactions with any certificate.
-	MappingTypeAnyCert MappingType = "any_cert"
-	// MappingTypeCertType maps transactions with a specific certificate type.
-	MappingTypeCertType MappingType = "cert_type"
-	// MappingTypeProposal maps transactions with any governance proposal.
+	// MappingTypeCert maps transactions with certificates. Key can be a specific cert type or "*" for any.
+	MappingTypeCert MappingType = "cert"
+	// MappingTypeProposal maps transactions with any governance proposal. Key should be "*".
 	MappingTypeProposal MappingType = "proposal"
-	// MappingTypeVote maps transactions with any governance vote.
+	// MappingTypeVote maps transactions with any governance vote. Key should be "*".
 	MappingTypeVote MappingType = "vote"
 )
 
@@ -28,6 +25,7 @@ type Mapping struct {
 	Type    MappingType `json:"type" db:"type"`
 	Key     string      `json:"key" db:"key"`
 	Topic   string      `json:"topic" db:"topic"`
+	Encoder string      `json:"encoder,omitempty" db:"encoder"`
 }
 
 // Checkpoint represents a point in the blockchain to sync from.

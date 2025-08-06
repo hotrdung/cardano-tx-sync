@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"cardano-tx-sync/internal/encoder"
 	"cardano-tx-sync/internal/kafka"
 	"cardano-tx-sync/internal/model"
 	"cardano-tx-sync/internal/storage"
@@ -96,90 +97,96 @@ func (h *BlockHandler) HandleRollBackward(rb *chainsync.Point) error {
 }
 
 func (h *BlockHandler) processTx(tx chainsync.Tx, blockDetails model.BlockDetails) {
-	// Use a map to collect unique topics to avoid sending duplicate messages.
-	topics := make(map[string]struct{})
+	// topicsByEncoder groups topics by the required encoder name.
+	// map[encoderName]map[topicName]struct{}
+	topicsByEncoder := make(map[string]map[string]struct{})
 
-	// Helper function to add topics from storage to our map
-	addTopics := func(mappingType model.MappingType, key string) {
-		newTopics, err := h.storage.GetTopicsFor(string(mappingType), key)
+	// addMapping finds all relevant mappings and groups their topics by encoder.
+	addMapping := func(mappingType model.MappingType, key string) {
+		mappings, err := h.storage.GetMappingsFor(string(mappingType), key)
 		if err != nil {
-			h.logger.Error("failed to get topics",
+			h.logger.Error("failed to get mappings",
 				zap.String("type", string(mappingType)),
 				zap.String("key", key),
 				zap.Error(err))
 			return
 		}
-		for _, topic := range newTopics {
-			topics[topic] = struct{}{}
+		for _, m := range mappings {
+			if _, ok := topicsByEncoder[m.Encoder]; !ok {
+				topicsByEncoder[m.Encoder] = make(map[string]struct{})
+			}
+			topicsByEncoder[m.Encoder][m.Topic] = struct{}{}
 		}
 	}
 
 	// 1. Address and Policy ID mappings
+	addMapping(model.MappingTypeAddress, "*")
+
 	for _, output := range tx.Outputs {
 		// Check for address mappings
-		addTopics(model.MappingTypeAddress, output.Address)
+		addMapping(model.MappingTypeAddress, output.Address)
 
 		// Check for policy ID mappings
 		for policyID, _ := range output.Value {
-			addTopics(model.MappingTypePolicyID, policyID)
+			addMapping(model.MappingTypePolicyID, policyID)
 		}
 	}
 
 	// 2. Certificate mappings
 	if len(tx.Certificates) > 0 {
-		addTopics(model.MappingTypeAnyCert, "any")
+		addMapping(model.MappingTypeCert, "*") // For any certificate
+
 		for _, cert := range tx.Certificates {
 			var c map[string]interface{}
 			if err := json.Unmarshal(cert, &c); err != nil {
 				h.logger.Error("failed to unmarshal certificate", zap.Error(err), zap.Any("certificate", cert))
 				continue
 			}
-
-			switch c["type"].(string) {
-			case "stakeDelegation":
-				addTopics(model.MappingTypeCertType, "stakeDelegation")
-			case "stakeCredentialRegistration":
-				addTopics(model.MappingTypeCertType, "stakeCredentialRegistration")
-			case "stakeCredentialDeregistration":
-				addTopics(model.MappingTypeCertType, "stakeCredentialDeregistration")
-			case "stakePoolRegistration":
-				addTopics(model.MappingTypeCertType, "stakePoolRegistration")
-			case "stakePoolRetirement":
-				addTopics(model.MappingTypeCertType, "stakePoolRetirement")
-			case "delegateRepresentativeRegistration":
-				addTopics(model.MappingTypeCertType, "delegateRepresentativeRegistration")
-			case "delegateRepresentativeUpdate":
-				addTopics(model.MappingTypeCertType, "delegateRepresentativeUpdate")
-			case "delegateRepresentativeRetirement":
-				addTopics(model.MappingTypeCertType, "delegateRepresentativeRetirement")
-			case "genesisDelegation":
-				addTopics(model.MappingTypeCertType, "genesisDelegation")
-			case "constitutionalCommitteeDelegation":
-				addTopics(model.MappingTypeCertType, "constitutionalCommitteeDelegation")
-			case "constitutionalCommitteeRetirement":
-				addTopics(model.MappingTypeCertType, "constitutionalCommitteeRetirement")
+			if certType, ok := c["type"].(string); ok {
+				addMapping(model.MappingTypeCert, certType)
+			} else {
+				h.logger.Warn("certificate 'type' field is missing or not a string", zap.Any("certificate", cert))
 			}
 		}
 	}
 
 	// 3. Proposal mapping
 	if len(tx.Proposals) > 0 {
-		addTopics(model.MappingTypeProposal, "any")
+		addMapping(model.MappingTypeProposal, "*")
 	}
 
 	// 4. Vote mapping
 	if len(tx.Votes) > 0 {
-		addTopics(model.MappingTypeVote, "any")
+		addMapping(model.MappingTypeVote, "*")
 	}
 
-	if len(topics) > 0 {
-		msg := model.TxnMessage{
-			Tx:    tx,
-			Block: blockDetails,
-		}
-		for topic := range topics {
-			if err := h.producer.SendMessage(topic, msg); err != nil {
-				h.logger.Error("failed to send message to kafka", zap.Error(err), zap.String("topic", topic), zap.String("tx_id", tx.ID))
+	// If any mappings were matched, encode and send the message.
+	if len(topicsByEncoder) > 0 {
+		txnMsg := model.TxnMessage{Tx: tx, Block: blockDetails}
+		for encoderName, topics := range topicsByEncoder {
+			// Get the appropriate encoder
+			enc, err := encoder.GetEncoder(encoderName)
+			if err != nil {
+				h.logger.Error("could not find encoder", zap.String("encoder", encoderName), zap.Error(err))
+				continue
+			}
+
+			// Encode the message
+			encodedMsg, err := enc.Encode(txnMsg)
+			if err != nil {
+				h.logger.Error("failed to encode message", zap.String("encoder", encoderName), zap.Error(err))
+				continue
+			}
+
+			// Send to all topics for this encoder
+			for topic := range topics {
+				if err := h.producer.SendMessage(topic, encodedMsg); err != nil {
+					h.logger.Error("failed to send message to kafka",
+						zap.Error(err),
+						zap.String("topic", topic),
+						zap.String("encoder", encoderName),
+						zap.String("tx_id", tx.ID))
+				}
 			}
 		}
 	}

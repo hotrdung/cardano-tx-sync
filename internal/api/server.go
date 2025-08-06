@@ -6,6 +6,7 @@ import (
 	"cardano-tx-sync/internal/storage"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -22,8 +23,7 @@ type Server struct {
 var validMappingTypes = map[model.MappingType]bool{
 	model.MappingTypeAddress:  true,
 	model.MappingTypePolicyID: true,
-	model.MappingTypeAnyCert:  true,
-	model.MappingTypeCertType: true,
+	model.MappingTypeCert:     true,
 	model.MappingTypeProposal: true,
 	model.MappingTypeVote:     true,
 }
@@ -73,12 +73,19 @@ func (s *Server) addMapping(c *gin.Context) {
 		return
 	}
 
-	// For certain types, the key can be a generic value like "any"
-	if req.Type == model.MappingTypeAnyCert || req.Type == model.MappingTypeProposal || req.Type == model.MappingTypeVote {
-		if req.Key == "" {
-			req.Key = "any" // Use a default key
+	// For wildcard types, ensure the key is "*"
+	if req.Type == model.MappingTypeProposal || req.Type == model.MappingTypeVote {
+		if req.Key != "*" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "key for proposal or vote mapping must be '*' "})
+			return
 		}
 	}
+
+	// Default encoder if not provided
+	if req.Encoder == "" {
+		req.Encoder = "DEFAULT"
+	}
+	req.Encoder = strings.ToUpper(req.Encoder)
 
 	id, err := s.storage.AddMapping(req)
 	if err != nil {

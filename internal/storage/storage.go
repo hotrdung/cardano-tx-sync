@@ -7,7 +7,7 @@ import "cardano-tx-sync/internal/model"
 type Storage interface {
 	AddMapping(mapping model.Mapping) (int, error)
 	RemoveMapping(id int) error
-	GetTopicsFor(mappingType, key string) ([]string, error)
+	GetMappingsFor(mappingType, key string) ([]model.Mapping, error)
 	SaveCheckpoint(checkpoint model.Checkpoint, maxCheckpoints int) error
 	GetLatestCheckpoints(limit int) ([]model.Checkpoint, error)
 	ClearCheckpoints() error

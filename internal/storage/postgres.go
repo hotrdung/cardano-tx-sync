@@ -56,10 +56,11 @@ func (s *PostgresStorage) initSchema() error {
 	CREATE TABLE IF NOT EXISTS mappings (
 		id SERIAL PRIMARY KEY,
 		group_id INTEGER REFERENCES mapping_groups(id) ON DELETE CASCADE,
-		type TEXT NOT NULL, -- 'address', 'policy_id', 'any_cert', 'cert_type', 'proposal', 'vote'
+		type TEXT NOT NULL, -- 'address', 'policy_id', 'cert', 'proposal', 'vote'
 		key TEXT NOT NULL,
 		topic TEXT NOT NULL,
-		UNIQUE(type, key)
+		encoder TEXT NOT NULL DEFAULT 'DEFAULT',
+		UNIQUE(type, key, topic)
 	);
 
 	CREATE TABLE IF NOT EXISTS checkpoints (
@@ -81,8 +82,8 @@ func (s *PostgresStorage) Close() error {
 // AddMapping adds a new mapping to the database.
 func (s *PostgresStorage) AddMapping(mapping model.Mapping) (int, error) {
 	var id int
-	query := `INSERT INTO mappings (group_id, type, key, topic) VALUES ($1, $2, $3, $4) RETURNING id`
-	err := s.db.QueryRow(query, mapping.GroupID, mapping.Type, mapping.Key, mapping.Topic).Scan(&id)
+	query := `INSERT INTO mappings (group_id, type, key, topic, encoder) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	err := s.db.QueryRow(query, mapping.GroupID, mapping.Type, mapping.Key, mapping.Topic, mapping.Encoder).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -101,22 +102,22 @@ func (s *PostgresStorage) RemoveMapping(id int) error {
 	return nil
 }
 
-// GetTopicsFor finds topics for a given mapping type and key.
-func (s *PostgresStorage) GetTopicsFor(mappingType, key string) ([]string, error) {
-	cacheKey := fmt.Sprintf("%s:%s", mappingType, key)
-	if topics, found := s.cache.Get(cacheKey); found {
-		return topics.([]string), nil
+// GetMappingsFor finds mappings for a given mapping type and key.
+func (s *PostgresStorage) GetMappingsFor(mappingType, key string) ([]model.Mapping, error) {
+	cacheKey := fmt.Sprintf("mappings:%s:%s", mappingType, key)
+	if cached, found := s.cache.Get(cacheKey); found {
+		return cached.([]model.Mapping), nil
 	}
 
-	var topics []string
-	query := `SELECT topic FROM mappings WHERE type = $1 AND key = $2`
-	err := s.db.Select(&topics, query, mappingType, key)
+	var mappings []model.Mapping
+	query := `SELECT id, group_id, type, key, topic, encoder FROM mappings WHERE type = $1 AND key = $2`
+	err := s.db.Select(&mappings, query, mappingType, key)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
-	s.cache.Set(cacheKey, topics, cache.DefaultExpiration)
-	return topics, nil
+	s.cache.Set(cacheKey, mappings, cache.DefaultExpiration)
+	return mappings, nil
 }
 
 // SaveCheckpoint saves a new checkpoint.

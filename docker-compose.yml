@@ -1,5 +1,4 @@
 # docker-compose.yml
-version: '3.8'
 
 services:
   zookeeper:
@@ -34,13 +33,13 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ogmios_kafka_bridge
+      POSTGRES_DB: cardano_tx_sync
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   # app:
   #   build: .
-  #   container_name: ogmios_kafka_bridge
+  #   container_name: cardano_tx_sync
   #   ports:
   #     - "8080:8080"
   #   depends_on:

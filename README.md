@@ -1,6 +1,6 @@
 # README.md
 
-# Cardano Ogmios Kafka Bridge
+# Cardano Tx Sync
 
 This project provides a reliable and scalable service to sync blocks from a Cardano node via Ogmios, parse transactions, and publish them to relevant Kafka topics based on configurable mappings.
 
@@ -8,6 +8,7 @@ This project provides a reliable and scalable service to sync blocks from a Card
 
 - **Real-time Sync**: Connects to Ogmios's chainsync mini-protocol to receive blocks as they are added to the chain.
 - **Dynamic Topic Mapping**: Publishes transaction data to Kafka topics based on mappings for output addresses or asset policy IDs stored in a database.
+- **Flexible Message Encoding**: Supports multiple message formats (e.g., full JSON, simple ID) on a per-mapping basis.
 - **Reliable Checkpointing**: Keeps track of the last synced block to ensure seamless resumption after a restart.
 - **Rollback Handling**: Correctly handles blockchain rollbacks by invalidating data and notifying downstream services.
 - **Management API**: Provides HTTP endpoints to manage topic mappings and control the sync starting point.
@@ -23,6 +24,7 @@ This project provides a reliable and scalable service to sync blocks from a Card
 ├── internal/
 │   ├── api/            # HTTP API server
 │   ├── chainsync/      # Ogmios chainsync logic
+│   ├── encoder/        # Message encoders (JSON, Simple, etc.)
 │   ├── handler/        # Block processing and Kafka publishing
 │   ├── kafka/          # Kafka producer wrapper
 │   ├── model/          # Application data models
@@ -73,22 +75,23 @@ You can interact with the service using its REST API.
 
 **Endpoint**: `POST /mappings`
 
-**Body**:
+**Body Examples**:
 ```json
 {
     "type": "address",
     "key": "addr1q8...your_address",
-    "topic": "my-awesome-dapp-transactions"
+    "topic": "my-awesome-dapp-transactions",
+    "encoder": "DEFAULT"
 }
-```
-or
 ```json
 {
     "type": "policy_id",
     "key": "your_policy_id",
-    "topic": "my-nft-project-mints"
+    "topic": "my-nft-project-mints",
+    "encoder": "SIMPLE"
 }
 ```
+The `encoder` field is optional and defaults to `DEFAULT`. Supported values are `DEFAULT`, `SIMPLE`, and `DANOGO`.
 
 #### Remove a mapping
 

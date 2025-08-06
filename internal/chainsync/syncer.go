@@ -170,6 +170,8 @@ func (s *Syncer) handleChainSyncResponse(response *chainsync.ResponsePraos) erro
 			return s.handler.HandleRollBackward(nextBlockResult.Point)
 		}
 
+	default:
+		s.logger.Warn("received an unknown methodname in chainsync response", zap.String("method", response.Method))
 	}
 
 	return nil

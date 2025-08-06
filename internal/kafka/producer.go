@@ -29,17 +29,25 @@ func NewProducer(brokers []string) (*Producer, error) {
 
 // SendMessage sends a message to a Kafka topic.
 func (p *Producer) SendMessage(topic string, message interface{}) error {
-	msgBytes, err := json.Marshal(message)
-	if err != nil {
-		return err
+	// If the message is already bytes, send it directly.
+	// Otherwise, JSON marshal it.
+	var value sarama.Encoder
+	if msgBytes, ok := message.([]byte); ok {
+		value = sarama.ByteEncoder(msgBytes)
+	} else {
+		msgBytes, err := json.Marshal(message)
+		if err != nil {
+			return err
+		}
+		value = sarama.StringEncoder(msgBytes)
 	}
 
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
-		Value: sarama.StringEncoder(msgBytes),
+		Value: value,
 	}
 
-	_, _, err = p.producer.SendMessage(msg)
+	_, _, err := p.producer.SendMessage(msg)
 	return err
 }
 
